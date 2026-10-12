@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-full bg-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>3광역수사대 대기수사대 근무표</title>
+    <!-- Web App & PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1e1b4b">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase JS Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        .safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 1rem); }
+        .safe-area-pt { padding-top: env(safe-area-inset-top, 0.5rem); }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 h-full flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+    <div id="supabaseModal" class="fixed inset-0 bg-indigo-950/95 backdrop-blur-lg z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-white/20 space-y-6">
+            <div class="text-center space-y-2">
+                <div class="inline-flex bg-gradient-to-tr from-indigo-600 to-indigo-800 text-white p-4 rounded-2xl shadow-lg shadow-indigo-500/30 mb-1">
+                    <i class="fa-solid fa-database text-3xl"></i>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Supabase 클라우드 연동</h2>
+                <p class="text-xs text-slate-500 font-medium">17명 수사관 실시간 공유를 위해 Supabase 정보를 입력하세요.</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Supabase Project URL</label>
+                    <input type="text" id="supabaseUrlInput" placeholder="https://xxxx.supabase.co" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-indigo-600 focus:bg-white focus:outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Supabase Anon/Public Key</label>
+                    <input type="password" id="supabaseKeyInput" placeholder="eyJhbGciOi..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-indigo-600 focus:bg-white focus:outline-none transition">
+                </div>
+
+                <div class="flex space-x-2 pt-2">
+                    <button onclick="initSupabaseWithDemo()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-xs">데모 모드(로컬)</button>
+                    <button onclick="connectSupabase()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-600/30 transition text-xs">연동 및 시작</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loginModal" class="fixed inset-0 bg-indigo-950/90 backdrop-blur-lg z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 sm:p-8 shadow-2xl border border-white/20 space-y-6">
+            <div class="text-center space-y-2">
+                <div class="inline-flex bg-gradient-to-tr from-indigo-600 to-indigo-800 text-white p-4 rounded-2xl shadow-lg shadow-indigo-500/30 mb-1">
+                    <i class="fa-solid fa-shield-halved text-3xl"></i>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">3광역수사대 근무표</h2>
+                <p class="text-xs text-slate-500 font-medium">등록된 휴대폰 번호(ID)로 로그인하세요.</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">휴대폰 번호 (ID)</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-solid fa-mobile-screen-button text-sm"></i></span>
+                        <input type="tel" id="loginPhoneInput" value="01050897901" placeholder="01012345678" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-indigo-600 focus:bg-white focus:outline-none transition">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">비밀번호</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-solid fa-lock text-sm"></i></span>
+                        <input type="password" id="loginPasswordInput" value="admin123" placeholder="비밀번호 입력" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-indigo-600 focus:bg-white focus:outline-none transition">
+                    </div>
+                </div>
+
+                <button onclick="handleLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center space-x-2 text-sm mt-2">
+                    <span>로그인 및 접속</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <header class="bg-indigo-950 text-white shadow-lg sticky top-0 z-30 safe-area-pt">
+        <div class="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-800/80 p-2 rounded-xl text-amber-400 shadow-inner">
+                    <i class="fa-solid fa-shield-halved text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold tracking-tight text-white leading-tight">3광역수사대 대기수사대 근무표</h1>
+                    <p class="text-[10px] sm:text-xs text-indigo-300 font-medium" id="headerAlertStatusText">매일 16:00 카카오톡 알림 활성화 (실시간 동기화)</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <div id="currentRoleBadge" class="hidden sm:inline-flex items-center space-x-1.5 bg-indigo-900/80 px-3 py-1.5 rounded-xl border border-indigo-700/50 text-xs font-semibold text-indigo-100"></div>
+                <button onclick="logout()" class="p-2 sm:px-3 sm:py-1.5 bg-indigo-900/60 hover:bg-indigo-800 active:scale-95 text-indigo-200 hover:text-white rounded-xl text-xs font-medium border border-indigo-800 transition flex items-center space-x-1">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span class="hidden sm:inline">로그아웃</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 overflow-y-auto pb-20 lg:pb-6">
+        
+        <!-- Sidebar Controls -->
+        <div class="lg:col-span-1 flex flex-col space-y-4">
+            
+            <!-- Month Picker -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between">
+                    <button onclick="changeMonth(-1)" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 transition flex items-center justify-center"><i class="fa-solid fa-chevron-left"></i></button>
+                    <span id="currentMonthLabel" class="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight">2026년 10월</span>
+                    <button onclick="changeMonth(1)" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 transition flex items-center justify-center"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+
+                <!-- Admin Action Buttons -->
+                <div id="adminControls" class="space-y-2 mt-3 pt-3 border-t border-slate-100 hidden">
+                    <button onclick="openBatchModal()" class="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white font-semibold py-2.5 px-3 rounded-xl shadow-md shadow-indigo-600/20 transition flex items-center justify-center space-x-2 text-xs sm:text-sm">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>평일/주말 독립순환 자동편성</span>
+                    </button>
+                    <button onclick="openConfigModal()" class="w-full bg-slate-100 hover:bg-slate-200 active:scale-98 text-slate-700 font-semibold py-2.5 px-3 rounded-xl transition flex items-center justify-center space-x-2 text-xs sm:text-sm">
+                        <i class="fa-solid fa-users-gear"></i>
+                        <span>수사관/대장/관리자 설정</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Today Duty Card -->
+            <div class="bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-900 rounded-2xl p-4 sm:p-5 text-white shadow-md relative overflow-hidden">
+                <div class="absolute -right-4 -bottom-4 opacity-10 text-7xl pointer-events-none">
+                    <i class="fa-solid fa-bell"></i>
+                </div>
+                <div class="flex items-center justify-between mb-3 relative z-10">
+                    <h3 class="text-xs uppercase tracking-wider text-indigo-300 font-bold">오늘의 대기수사대 근무</h3>
+                    <span id="summaryAlertBadge" class="bg-emerald-500/20 text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-bold">ON</span>
+                </div>
+                <div id="todaySummaryBox" class="space-y-2 relative z-10 text-xs"></div>
+                <div class="mt-3 pt-2.5 border-t border-indigo-800/80 flex justify-between items-center text-[11px] text-indigo-300 relative z-10">
+                    <span id="summaryAlertTimeText"><i class="fa-regular fa-clock mr-1"></i>알림: 16:00</span>
+                    <button onclick="triggerKakaoAlert()" class="text-amber-400 hover:text-amber-300 font-bold underline">카톡 테스트</button>
+                </div>
+            </div>
+
+            <!-- Kakao Notification Settings -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-bell text-amber-500 text-sm"></i>
+                        <h3 class="text-xs sm:text-sm font-bold text-slate-800">카카오톡 자동 알림</h3>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="toggleAlertSwitch" checked onchange="toggleAlertSetting()" class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between text-xs">
+                    <label for="alertTimeInput" class="font-bold text-slate-700">알림 시각 설정</label>
+                    <input type="time" id="alertTimeInput" value="16:00" onchange="updateAlertTime()" class="border border-slate-200 rounded-lg p-1.5 bg-slate-50 text-slate-800 font-bold focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <button onclick="triggerKakaoAlert()" class="w-full bg-[#FFE812] hover:bg-[#f6dc00] active:scale-98 text-slate-900 font-extrabold py-2.5 px-3 rounded-xl shadow-sm transition flex items-center justify-center space-x-2 text-xs sm:text-sm">
+                    <i class="fa-solid fa-comment text-slate-900"></i>
+                    <span>당일 수사관/대장 알림톡 발송</span>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Right View: Calendar & List -->
+        <div class="lg:col-span-3 flex flex-col space-y-4">
+            
+            <div class="bg-white rounded-2xl p-3 shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto text-xs font-bold">
+                    <button onclick="switchView('calendar')" id="btnViewCalendar" class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition bg-white text-indigo-900 shadow-sm">캘린더 뷰</button>
+                    <button onclick="switchView('list')" id="btnViewList" class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition text-slate-600 hover:text-slate-900">목록 뷰</button>
+                </div>
+                <div class="w-full sm:w-64 relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                    </span>
+                    <input type="text" id="searchInvestigator" oninput="filterSchedule()" placeholder="수사관/대장 성명 검색..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <div id="calendarViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 sm:p-5 flex-1">
+                <div class="grid grid-cols-7 gap-1 sm:gap-2 text-center text-[11px] font-bold text-slate-400 uppercase mb-2">
+                    <div class="text-rose-500">일</div>
+                    <div>월</div>
+                    <div>화</div>
+                    <div>수</div>
+                    <div>목</div>
+                    <div>금</div>
+                    <div class="text-blue-500">토</div>
+                </div>
+                <div id="calendarGrid" class="grid grid-cols-7 gap-1.5 sm:gap-2"></div>
+            </div>
+
+            <div id="listViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 sm:p-5 flex-1 hidden overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase">
+                            <th class="py-2.5 px-3">날짜</th>
+                            <th class="py-2.5 px-3">구분</th>
+                            <th class="py-2.5 px-3">1조 (선임)</th>
+                            <th class="py-2.5 px-3">2조 (후임)</th>
+                            <th class="py-2.5 px-3">담당 수사대장</th>
+                            <th class="py-2.5 px-3 text-right">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listTableBody" class="divide-y divide-slate-100 text-xs font-medium"></tbody>
+                </table>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-2 flex justify-around items-center z-40 safe-area-pb shadow-lg">
+        <button onclick="switchView('calendar')" class="flex flex-col items-center text-indigo-600">
+            <i class="fa-solid fa-calendar-days text-lg"></i>
+            <span class="text-[10px] font-bold mt-0.5">캘린더</span>
+        </button>
+        <button onclick="switchView('list')" class="flex flex-col items-center text-slate-500 hover:text-indigo-600">
+            <i class="fa-solid fa-list-check text-lg"></i>
+            <span class="text-[10px] font-bold mt-0.5">목록</span>
+        </button>
+        <button onclick="openBatchModal()" id="mobileBatchBtn" class="flex flex-col items-center text-slate-500 hover:text-indigo-600 hidden">
+            <i class="fa-solid fa-sliders text-lg"></i>
+            <span class="text-[10px] font-bold mt-0.5">자동편성</span>
+        </button>
+        <button onclick="openConfigModal()" id="mobileConfigBtn" class="flex flex-col items-center text-slate-500 hover:text-indigo-600 hidden">
+            <i class="fa-solid fa-gear text-lg"></i>
+            <span class="text-[10px] font-bold mt-0.5">설정</span>
+        </button>
+    </div>
+
+    <!-- Batch Generation Modal -->
+    <div id="batchModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="bg-indigo-100 text-indigo-700 p-2 rounded-xl"><i class="fa-solid fa-sliders"></i></div>
+                    <h3 class="text-base font-extrabold text-slate-800">평일/주말 독립순환 자동편성</h3>
+                </div>
+                <button onclick="closeBatchModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="space-y-4 pt-1">
+                <div class="border border-indigo-100 bg-indigo-50/30 p-3 rounded-2xl space-y-3">
+                    <h4 class="text-xs font-extrabold text-indigo-900 flex items-center"><i class="fa-solid fa-calendar-day mr-1.5"></i>평일 근무 시작 수사관</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] font-bold text-indigo-700 mb-1">1조 (선임)</label>
+                            <select id="startWeekdayT1" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500"></select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-amber-700 mb-1">2조 (후임)</label>
+                            <select id="startWeekdayT2" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border border-rose-100 bg-rose-50/30 p-3 rounded-2xl space-y-3">
+                    <h4 class="text-xs font-extrabold text-rose-900 flex items-center"><i class="fa-solid fa-umbrella-beach mr-1.5"></i>주말 근무 시작 수사관 (금~일)</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] font-bold text-indigo-700 mb-1">1조 (선임)</label>
+                            <select id="startWeekendT1" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500"></select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-amber-700 mb-1">2조 (후임)</label>
+                            <select id="startWeekendT2" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500"></select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex space-x-2 pt-2">
+                <button onclick="closeBatchModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-xs">취소</button>
+                <button onclick="runBatchGeneration()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md transition text-xs">자동 편성 적용</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Day Edit & Holiday Modal -->
+    <div id="dayModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div>
+                    <h3 id="modalDateTitle" class="text-base font-extrabold text-slate-800">날짜 지정</h3>
+                    <p class="text-[11px] font-medium text-slate-400" id="modalDayTypeLabel">근무 구분</p>
+                </div>
+                <button onclick="closeDayModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <input type="hidden" id="modalDateKey">
+
+            <div class="bg-rose-50 border border-rose-200 p-3 rounded-2xl space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-extrabold text-rose-800 flex items-center"><i class="fa-solid fa-umbrella-beach mr-1.5"></i>공휴일/휴일 지정</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="modalIsHolidayToggle" onchange="toggleModalHolidayInput()" class="sr-only peer">
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
+                    </label>
+                </div>
+                <div id="holidayNameContainer" class="hidden">
+                    <input type="text" id="modalHolidayName" placeholder="휴일 명칭 (예: 임시공휴일)" class="w-full p-2 bg-white border border-rose-200 rounded-xl text-xs font-medium text-rose-900 focus:outline-none focus:ring-2 focus:ring-rose-400">
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-indigo-700 uppercase mb-1">1조 수사관 (선임)</label>
+                    <select id="modalTeam1Officer" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-indigo-500"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-amber-700 uppercase mb-1">2조 수사관 (후임)</label>
+                    <select id="modalTeam2Officer" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-indigo-500"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">담당 수사대장</label>
+                    <select id="modalCommander" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-indigo-500"></select>
+                </div>
+            </div>
+
+            <div class="flex space-x-2 pt-2 border-t border-slate-100">
+                <button onclick="closeDayModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-xs">취소</button>
+                <button onclick="saveDayModal()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md transition text-xs">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Modal -->
+    <div id="configModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="text-base font-extrabold text-slate-800">명단 및 관리자 설정</h3>
+                <button onclick="closeConfigModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="flex space-x-1.5 border-b border-slate-100 pb-2 text-xs font-bold">
+                <button onclick="switchConfigTab('officer')" id="tabOfficerBtn" class="flex-1 py-2 rounded-xl bg-indigo-600 text-white transition shadow-sm">수사관 관리</button>
+                <button onclick="switchConfigTab('commander')" id="tabCommanderBtn" class="flex-1 py-2 rounded-xl bg-slate-100 text-slate-600 transition">수사대장 추가</button>
+                <button onclick="switchConfigTab('admin')" id="tabAdminBtn" class="flex-1 py-2 rounded-xl bg-slate-100 text-slate-600 transition">관리자 추가</button>
+            </div>
+
+            <div id="tabOfficerContent" class="space-y-3">
+                <div class="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs">
+                    <label class="block font-bold text-slate-700 uppercase">새 수사관 등록</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <select id="newOfficerTeam" class="p-2.5 bg-white border border-slate-200 rounded-xl font-bold">
+                            <option value="1">1조 (선임조)</option>
+                            <option value="2">2조 (후임조)</option>
+                        </select>
+                        <input type="text" id="newOfficerName" placeholder="성명" class="p-2.5 bg-white border border-slate-200 rounded-xl font-medium">
+                        <input type="tel" id="newOfficerContact" placeholder="전화번호 ID" class="p-2.5 bg-white border border-slate-200 rounded-xl font-medium">
+                    </div>
+                    <button onclick="addOfficer()" class="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition">등록하기</button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-indigo-700 uppercase mb-1.5">1조 명단 (선임)</label>
+                        <div id="team1ListContainer" class="space-y-1.5 max-h-36 overflow-y-auto border border-slate-200 p-2 rounded-xl bg-indigo-50/20"></div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-amber-700 uppercase mb-1.5">2조 명단 (후임)</label>
+                        <div id="team2ListContainer" class="space-y-1.5 max-h-36 overflow-y-auto border border-slate-200 p-2 rounded-xl bg-amber-50/20"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tabCommanderContent" class="space-y-3 hidden">
+                <div class="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs">
+                    <label class="block font-bold text-slate-700 uppercase">수사대장 등록</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input type="text" id="newCommanderName" placeholder="성명/직함" class="p-2.5 bg-white border border-slate-200 rounded-xl font-medium">
+                        <input type="tel" id="newCommanderContact" placeholder="전화번호 (ID)" class="p-2.5 bg-white border border-slate-200 rounded-xl font-medium">
+                    </div>
+                    <button onclick="addCommander()" class="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition">수사대장 등록</button>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">등록된 수사대장 목록</label>
+                    <div id="commanderListContainer" class="space-y-1.5 max-h-40 overflow-y-auto border border-slate-200 p-2 rounded-xl bg-slate-50"></div>
+                </div>
+            </div>
+
+            <div id="tabAdminContent" class="space-y-3 hidden">
+                <div class="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs">
+                    <label class="block font-bold text-slate-700 uppercase">관리자 계정 추가</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input type="text" id="newAdminName" placeholder="성명" class="p-2.5 bg-white border border-slate-200 rounded-xl font-medium">
+                        <input type="tel" id="newAdminContact" placeholder="전화번호 ID" class="p-2.5 bg-white border border-slate-200 rounded-xl font-medium">
+                        <input type="password" id="newAdminPassword" placeholder="비밀번호" class="p-2.5 bg-white border border-slate-200 rounded-xl font-medium">
+                    </div>
+                    <button onclick="addAdmin()" class="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition">관리자 등록</button>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">등록된 관리자 목록</label>
+                    <div id="adminListContainer" class="space-y-1.5 max-h-40 overflow-y-auto border border-slate-200 p-2 rounded-xl bg-slate-50"></div>
+                </div>
+            </div>
+
+            <div class="pt-1">
+                <button onclick="closeConfigModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-xs">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kakao Alert Modal -->
+    <div id="kakaoAlertModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                <div class="flex items-center space-x-2">
+                    <div class="bg-[#FFE812] text-slate-900 px-2.5 py-1 rounded-xl font-black text-sm"><i class="fa-solid fa-comment"></i></div>
+                    <h3 class="text-sm font-extrabold text-slate-900">카카오톡 알림 발송</h3>
+                </div>
+                <button onclick="closeKakaoModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="bg-[#FEE500]/15 border border-[#FEE500]/50 p-3.5 rounded-2xl text-xs text-slate-800 space-y-2.5">
+                <div class="font-bold text-slate-900 flex items-center justify-between">
+                    <span>[3광역수사대] 알림톡</span>
+                    <span class="text-[10px] text-amber-700 font-mono">16:00</span>
+                </div>
+                <hr class="border-[#FFE812]/50">
+                <p id="kakaoMessageContent" class="leading-relaxed font-sans whitespace-pre-line text-[11px]"></p>
+                <div class="pt-1 text-[10px] text-slate-500">
+                    <span class="text-emerald-600 font-bold"><i class="fa-solid fa-check-circle mr-1"></i>실제 발송 대상 연동됨</span>
+                </div>
+            </div>
+
+            <div class="flex space-x-2">
+                <button onclick="shareViaKakaoWeb()" class="flex-1 bg-[#FFE812] hover:bg-[#f6dc00] text-slate-900 font-extrabold py-2.5 rounded-xl transition text-xs flex items-center justify-center space-x-1 shadow-sm">
+                    <i class="fa-solid fa-share-nodes"></i>
+                    <span>카카오톡 공유 링크</span>
+                </button>
+                <button onclick="closeKakaoModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl transition text-xs">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let supabaseClient = null;
+        let isDemoMode = false;
+
+        let currentYear = 2026;
+        let currentMonth = 9;
+        let currentUser = null;
+
+        let alertEnabled = true;
+        let alertTime = "16:00";
+
+        const fixedHolidays = {
+            "1-1": "신정", "3-1": "삼일절", "5-5": "어린이날", "6-6": "현충일",
+            "8-15": "광복절", "10-3": "개천절", "10-9": "한글날", "12-25": "성탄절"
+        };
+
+        let customHolidays = {};
+        let scheduleData = {};
+
+        let team1Officers = [
+            { id: 101, name: '김민수 경감', contact: '010-1111-2222', password: '123' },
+            { id: 102, name: '박서준 경사', contact: '010-3333-4444', password: '123' },
+            { id: 103, name: '한지호 경사', contact: '010-5555-6666', password: '123' },
+            { id: 104, name: '정우성 경위', contact: '010-7777-1111', password: '123' },
+            { id: 105, name: '강동원 경위', contact: '010-9999-0000', password: '123' }
+        ];
+
+        let team2Officers = [
+            { id: 201, name: '이지훈 경위', contact: '010-2222-3333', password: '123' },
+            { id: 202, name: '정소민 경위', contact: '010-4444-5555', password: '123' },
+            { id: 203, name: '오나라 경감', contact: '010-6666-7777', password: '123' },
+            { id: 204, name: '최유정 경위', contact: '010-8888-2222', password: '123' }
+        ];
+
+        let commanders = [
+            { id: 1, name: '강철수 수사대장', contact: '010-8888-8888', password: '123' },
+            { id: 2, name: '윤보라 수사대장', contact: '010-7777-7777', password: '123' }
+        ];
+
+        let admins = [
+            { id: 1, name: '최관리 수사관', contact: '01050897901', password: 'admin123', isAdmin: true }
+        ];
+
+        function initSupabaseWithDemo() {
+            isDemoMode = true;
+            document.getElementById('supabaseModal').classList.add('hidden');
+            document.getElementById('loginModal').classList.remove('hidden');
+            generateMonthlySchedule();
+            renderCalendar();
+            renderListTable();
+            updateTodaySummary();
+        }
+
+        async function connectSupabase() {
+            const url = document.getElementById('supabaseUrlInput').value.trim();
+            const key = document.getElementById('supabaseKeyInput').value.trim();
+
+            if (!url || !key) {
+                alert("Supabase URL과 Key를 모두 입력해주세요.");
+                return;
+            }
+
+            try {
+                supabaseClient = supabase.createClient(url, key);
+                // Test connection by fetching a table or creating default state
+                document.getElementById('supabaseModal').classList.add('hidden');
+                document.getElementById('loginModal').classList.remove('hidden');
+                await loadDataFromSupabase();
+            } catch (err) {
+                console.error(err);
+                alert("Supabase 연결 실패. 입력 정보를 확인해주세요.");
+            }
+        }
+
+        async function loadDataFromSupabase() {
+            if (!supabaseClient) return;
+            try {
+                const { data, error } = await supabaseClient.from('duty_app_state').select('*').eq('id', 1).single();
+                if (data && data.payload) {
+                    const parsed = JSON.parse(data.payload);
+                    team1Officers = parsed.team1Officers || team1Officers;
+                    team2Officers = parsed.team2Officers || team2Officers;
+                    commanders = parsed.commanders || commanders;
+                    admins = parsed.admins || admins;
+                    scheduleData = parsed.scheduleData || {};
+                    customHolidays = parsed.customHolidays || {};
+                }
+            } catch (e) {
+                console.log("No existing state found, saving initial state...");
+                await saveStateToSupabase();
+            }
+            generateMonthlySchedule();
+            renderCalendar();
+            renderListTable();
+            updateTodaySummary();
+        }
+
+        async function saveStateToSupabase() {
+            if (!supabaseClient || isDemoMode) return;
+            const payload = JSON.stringify({
+                team1Officers, team2Officers, commanders, admins, scheduleData, customHolidays
+            });
+            await supabaseClient.from('duty_app_state').upsert({ id: 1, payload, updated_at: new Date() });
+        }
+
+        function checkHolidayStatus(year, month, day) {
+            const dateObj = new Date(year, month, day);
+            const dayOfWeek = dateObj.getDay();
+            const mdKey = `${month + 1}-${day}`;
+            const fullKey = `${year}-${month + 1}-${day}`;
+
+            let isHoliday = false;
+            let holidayName = "";
+
+            if (dayOfWeek === 0 || dayOfWeek === 6) isHoliday = true;
+            if (fixedHolidays[mdKey]) { isHoliday = true; holidayName = fixedHolidays[mdKey]; }
+            if (customHolidays[fullKey]) { isHoliday = true; holidayName = customHolidays[fullKey]; }
+            if (scheduleData[fullKey] && scheduleData[fullKey].isCustomHoliday) {
+                isHoliday = true; holidayName = scheduleData[fullKey].holidayName || "공휴일";
+            }
+
+            return { isHoliday, isWeekend: dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6, dayOfWeek, holidayName };
+        }
+
+        function generateMonthlySchedule(startIndices = { w1: 0, w2: 0, we1: 0, we2: 0 }) {
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            let weekdayT1Idx = startIndices.w1 || 0;
+            let weekdayT2Idx = startIndices.w2 || 0;
+            let weekendT1Idx = startIndices.we1 || 0;
+            let weekendT2Idx = startIndices.we2 || 0;
+
+            let currentWeekendT1 = null;
+            let currentWeekendT2 = null;
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateKey = `${currentYear}-${currentMonth + 1}-${d}`;
+                const dateObj = new Date(currentYear, currentMonth, d);
+                const dayOfWeek = dateObj.getDay();
+                const holStatus = checkHolidayStatus(currentYear, currentMonth, d);
+
+                const isWeekdayDuty = (dayOfWeek >= 1 && dayOfWeek <= 4) && !holStatus.isHoliday;
+                let selectedT1 = '-';
+                let selectedT2 = '-';
+
+                if (isWeekdayDuty) {
+                    selectedT1 = team1Officers.length > 0 ? team1Officers[weekdayT1Idx % team1Officers.length].name : '-';
+                    selectedT2 = team2Officers.length > 0 ? team2Officers[weekdayT2Idx % team2Officers.length].name : '-';
+                    weekdayT1Idx++; weekdayT2Idx++;
+                    currentWeekendT1 = null; currentWeekendT2 = null;
+                } else {
+                    if (!currentWeekendT1 || !currentWeekendT2 || dayOfWeek === 5) {
+                        currentWeekendT1 = team1Officers.length > 0 ? team1Officers[weekendT1Idx % team1Officers.length].name : '-';
+                        currentWeekendT2 = team2Officers.length > 0 ? team2Officers[weekendT2Idx % team2Officers.length].name : '-';
+                        weekendT1Idx++; weekendT2Idx++;
+                    }
+                    selectedT1 = currentWeekendT1;
+                    selectedT2 = currentWeekendT2;
+                }
+
+                const cmdIdx = Math.floor((d - 1) / 15) % (commanders.length || 1);
+
+                if (!scheduleData[dateKey]) {
+                    scheduleData[dateKey] = {
+                        team1Officer: selectedT1, team2Officer: selectedT2,
+                        commander: commanders[cmdIdx] ? commanders[cmdIdx].name : '-',
+                        isCustomHoliday: holStatus.isHoliday, holidayName: holStatus.holidayName
+                    };
+                }
+            }
+            saveStateToSupabase();
+        }
+
+        function handleLogin() {
+            const phone = document.getElementById('loginPhoneInput').value.trim();
+            const password = document.getElementById('loginPasswordInput').value.trim();
+
+            if (!phone || !password) return alert("전화번호와 비밀번호를 입력하세요.");
+
+            let foundUser = admins.find(a => a.contact === phone);
+            let userTeam = '관리자';
+
+            if (!foundUser) {
+                foundUser = commanders.find(c => c.contact === phone);
+                if (foundUser) userTeam = '수사대장';
+            }
+            if (!foundUser) {
+                foundUser = team1Officers.find(o => o.contact === phone);
+                if (foundUser) userTeam = '1조(선임)';
+            }
+            if (!foundUser) {
+                foundUser = team2Officers.find(o => o.contact === phone);
+                if (foundUser) userTeam = '2조(후임)';
+            }
+
+            if (!foundUser) {
+                foundUser = { name: '방문 수사관', contact: phone, password: password, isAdmin: false };
+                team2Officers.push(foundUser);
+                userTeam = '2조(후임)';
+            }
+
+            currentUser = foundUser;
+            document.getElementById('loginModal').classList.add('hidden');
+
+            const roleBadge = document.getElementById('currentRoleBadge');
+            const adminControls = document.getElementById('adminControls');
+            const mobileBatchBtn = document.getElementById('mobileBatchBtn');
+            const mobileConfigBtn = document.getElementById('mobileConfigBtn');
+            const isUserAdmin = currentUser.isAdmin || admins.some(a => a.contact === currentUser.contact);
+
+            if (isUserAdmin) {
+                roleBadge.innerHTML = `<i class="fa-solid fa-crown text-amber-400 mr-1"></i><span>${currentUser.name} (관리자)</span>`;
+                adminControls.classList.remove('hidden');
+                mobileBatchBtn.classList.remove('hidden');
+                mobileConfigBtn.classList.remove('hidden');
+            } else {
+                roleBadge.innerHTML = `<i class="fa-solid fa-user-shield text-indigo-300 mr-1"></i><span>${currentUser.name} (${userTeam})</span>`;
+                adminControls.classList.add('hidden');
+                mobileBatchBtn.classList.add('hidden');
+                mobileConfigBtn.classList.add('hidden');
+            }
+
+            renderCalendar();
+            renderListTable();
+            updateTodaySummary();
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('loginModal').classList.remove('hidden');
+        }
+
+        function changeMonth(direction) {
+            currentMonth += direction;
+            if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+            else if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+            document.getElementById('currentMonthLabel').innerText = `${currentYear}년 ${currentMonth + 1}월`;
+            generateMonthlySchedule();
+            renderCalendar();
+            renderListTable();
+        }
+
+        function switchView(mode) {
+            const calCont = document.getElementById('calendarViewContainer');
+            const listCont = document.getElementById('listViewContainer');
+            const btnCal = document.getElementById('btnViewCalendar');
+            const btnList = document.getElementById('btnViewList');
+
+            if (mode === 'calendar') {
+                calCont.classList.remove('hidden'); listCont.classList.add('hidden');
+                btnCal.className = "flex-1 sm:flex-none px-4 py-2 rounded-lg transition bg-white text-indigo-900 shadow-sm font-bold";
+                btnList.className = "flex-1 sm:flex-none px-4 py-2 rounded-lg transition text-slate-600 hover:text-slate-900 font-bold";
+            } else {
+                calCont.classList.add('hidden'); listCont.classList.remove('hidden');
+                btnList.className = "flex-1 sm:flex-none px-4 py-2 rounded-lg transition bg-white text-indigo-900 shadow-sm font-bold";
+                btnCal.className = "flex-1 sm:flex-none px-4 py-2 rounded-lg transition text-slate-600 hover:text-slate-900 font-bold";
+            }
+        }
+
+        function toggleAlertSetting() {
+            alertEnabled = document.getElementById('toggleAlertSwitch').checked;
+            document.getElementById('summaryAlertBadge').innerText = alertEnabled ? "ON" : "OFF";
+        }
+
+        function updateAlertTime() {
+            alertTime = document.getElementById('alertTimeInput').value || "16:00";
+            document.getElementById('summaryAlertTimeText').innerHTML = `<i class="fa-regular fa-clock mr-1"></i>알림: ${alertTime}`;
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+            const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const filterText = document.getElementById('searchInvestigator').value.toLowerCase();
+
+            for (let i = 0; i < firstDayIndex; i++) {
+                grid.appendChild(document.createElement('div')).className = "bg-slate-50/50 rounded-xl h-24 sm:h-28";
+            }
+
+            const today = new Date();
+            const isCurrentRealMonth = today.getFullYear() === currentYear && today.getMonth() === currentMonth;
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateKey = `${currentYear}-${currentMonth + 1}-${d}`;
+                const duty = scheduleData[dateKey] || { team1Officer: '-', team2Officer: '-', commander: '-' };
+                const holStatus = checkHolidayStatus(currentYear, currentMonth, d);
+
+                const isMatch = !filterText || duty.team1Officer.toLowerCase().includes(filterText) || duty.team2Officer.toLowerCase().includes(filterText) || duty.commander.toLowerCase().includes(filterText);
+                const cell = document.createElement('div');
+                const isToday = isCurrentRealMonth && d === today.getDate();
+
+                let dateColorClass = "text-slate-800";
+                if (holStatus.isHoliday || holStatus.dayOfWeek === 0) dateColorClass = "text-rose-600 font-extrabold";
+                else if (holStatus.dayOfWeek === 6) dateColorClass = "text-blue-600 font-extrabold";
+
+                cell.className = `bg-white rounded-xl p-1.5 sm:p-2.5 shadow-sm border ${isToday ? 'border-indigo-600 ring-2 ring-indigo-500/20' : 'border-slate-200'} flex flex-col justify-between h-24 sm:h-28 cursor-pointer hover:shadow-md transition relative ${!isMatch ? 'opacity-30' : ''} ${holStatus.isHoliday ? 'bg-rose-50/30' : ''}`;
+
+                cell.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <span class="text-[11px] sm:text-xs font-extrabold ${dateColorClass}">
+                            ${d} ${holStatus.holidayName ? `<span class="text-[8px] text-rose-600 bg-rose-100 px-1 rounded font-bold">${holStatus.holidayName}</span>` : ''}
+                        </span>
+                        ${isToday ? '<span class="text-[8px] bg-indigo-600 text-white px-1 rounded font-bold">오늘</span>' : ''}
+                    </div>
+                    <div class="space-y-0.5 my-auto text-[10px] sm:text-xs">
+                        <div class="bg-indigo-50 text-indigo-950 px-1.5 py-0.5 rounded-md truncate font-extrabold flex items-center border border-indigo-100">
+                            <span class="text-[8px] text-indigo-500 font-black mr-1">1</span><span class="truncate">${duty.team1Officer}</span>
+                        </div>
+                        <div class="bg-amber-50 text-amber-950 px-1.5 py-0.5 rounded-md truncate font-extrabold flex items-center border border-amber-100">
+                            <span class="text-[8px] text-amber-600 font-black mr-1">2</span><span class="truncate">${duty.team2Officer}</span>
+                        </div>
+                    </div>
+                    <div class="text-[8px] sm:text-[10px] text-slate-400 truncate text-right font-medium">${duty.commander}</div>
+                `;
+                cell.onclick = () => openDayModal(d, dateKey);
+                grid.appendChild(cell);
+            }
+        }
+
+        function renderListTable() {
+            const tbody = document.getElementById('listTableBody');
+            tbody.innerHTML = '';
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const filterText = document.getElementById('searchInvestigator').value.toLowerCase();
+            const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateKey = `${currentYear}-${currentMonth + 1}-${d}`;
+                const duty = scheduleData[dateKey] || { team1Officer: '-', team2Officer: '-', commander: '-' };
+                const holStatus = checkHolidayStatus(currentYear, currentMonth, d);
+
+                const isMatch = !filterText || duty.team1Officer.toLowerCase().includes(filterText) || duty.team2Officer.toLowerCase().includes(filterText) || duty.commander.toLowerCase().includes(filterText);
+                if (!isMatch) continue;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 font-bold">${String(currentMonth + 1).padStart(2, '0')}/${String(d).padStart(2, '0')} (${weekDays[holStatus.dayOfWeek]})</td>
+                    <td class="py-2.5 px-3"><span class="${holStatus.isHoliday ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-700'} px-2 py-0.5 rounded-md text-[10px] font-bold">${holStatus.isHoliday ? '휴일' : '평일'}</span></td>
+                    <td class="py-2.5 px-3"><span class="bg-indigo-50 text-indigo-900 px-2 py-0.5 rounded-md font-bold text-xs">${duty.team1Officer}</span></td>
+                    <td class="py-2.5 px-3"><span class="bg-amber-50 text-amber-900 px-2 py-0.5 rounded-md font-bold text-xs">${duty.team2Officer}</span></td>
+                    <td class="py-2.5 px-3 text-slate-600 text-xs font-semibold">${duty.commander}</td>
+                    <td class="py-2.5 px-3 text-right">
+                        <button onclick="openDayModal(${d}, '${dateKey}')" class="text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg text-xs font-bold">수정</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        function filterSchedule() { renderCalendar(); renderListTable(); }
+
+        function updateTodaySummary() {
+            const todayBox = document.getElementById('todaySummaryBox');
+            const now = new Date();
+            const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+            const duty = scheduleData[dateKey] || { team1Officer: '미지정', team2Officer: '미지정', commander: '미지정' };
+
+            todayBox.innerHTML = `
+                <div class="flex items-center justify-between bg-indigo-900/60 px-3 py-2 rounded-xl border border-indigo-700/50">
+                    <span class="text-indigo-200">1조: ${duty.team1Officer}</span>
+                </div>
+                <div class="flex items-center justify-between bg-indigo-900/60 px-3 py-2 rounded-xl border border-indigo-700/50">
+                    <span class="text-amber-300">2조: ${duty.team2Officer}</span>
+                </div>
+                <div class="flex items-center justify-between bg-indigo-900/60 px-3 py-2 rounded-xl border border-indigo-700/50">
+                    <span class="text-slate-100">대장: ${duty.commander}</span>
+                </div>
+            `;
+        }
+
+        function openDayModal(day, dateKey) {
+            document.getElementById('modalDateKey').value = dateKey;
+            document.getElementById('modalDateTitle').innerText = `${currentYear}년 ${currentMonth + 1}월 ${day}일 근무 지정`;
+            const holStatus = checkHolidayStatus(currentYear, currentMonth, day);
+            document.getElementById('modalIsHolidayToggle').checked = holStatus.isHoliday;
+            document.getElementById('modalHolidayName').value = holStatus.holidayName || "";
+            populateSelectOptions('modalTeam1Officer', team1Officers, scheduleData[dateKey]?.team1Officer);
+            populateSelectOptions('modalTeam2Officer', team2Officers, scheduleData[dateKey]?.team2Officer);
+            populateSelectOptions('modalCommander', commanders, scheduleData[dateKey]?.commander);
+            document.getElementById('dayModal').classList.remove('hidden');
+        }
+
+        function toggleModalHolidayInput() {
+            const checked = document.getElementById('modalIsHolidayToggle').checked;
+            document.getElementById('holidayNameContainer').classList.toggle('hidden', !checked);
+        }
+
+        function closeDayModal() { document.getElementById('dayModal').classList.add('hidden'); }
+
+        function saveDayModal() {
+            const dateKey = document.getElementById('modalDateKey').value;
+            const team1Officer = document.getElementById('modalTeam1Officer').value;
+            const team2Officer = document.getElementById('modalTeam2Officer').value;
+            const commander = document.getElementById('modalCommander').value;
+            const isHoliday = document.getElementById('modalIsHolidayToggle').checked;
+            const holidayName = document.getElementById('modalHolidayName').value.trim();
+
+            if (isHoliday) customHolidays[dateKey] = holidayName || "지정 공휴일";
+            else delete customHolidays[dateKey];
+
+            scheduleData[dateKey] = { team1Officer, team2Officer, commander, isCustomHoliday: isHoliday, holidayName };
+            closeDayModal();
+            renderCalendar(); renderListTable(); updateTodaySummary();
+            saveStateToSupabase();
+        }
+
+        function populateSelectOptions(selectId, items, selectedValue) {
+            const sel = document.getElementById(selectId);
+            sel.innerHTML = '';
+            items.forEach((item, idx) => {
+                const opt = document.createElement('option');
+                opt.value = item.name;
+                opt.innerText = `${idx + 1}. ${item.name} (${item.contact})`;
+                if (item.name === selectedValue) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        }
+
+        function openBatchModal() {
+            populateSelectOptions('startWeekdayT1', team1Officers);
+            populateSelectOptions('startWeekdayT2', team2Officers);
+            populateSelectOptions('startWeekendT1', team1Officers);
+            populateSelectOptions('startWeekendT2', team2Officers);
+            document.getElementById('batchModal').classList.remove('hidden');
+        }
+
+        function closeBatchModal() { document.getElementById('batchModal').classList.add('hidden'); }
+
+        function runBatchGeneration() {
+            const w1Name = document.getElementById('startWeekdayT1').value;
+            const w2Name = document.getElementById('startWeekdayT2').value;
+            const we1Name = document.getElementById('startWeekendT1').value;
+            const we2Name = document.getElementById('startWeekendT2').value;
+
+            const w1Idx = Math.max(0, team1Officers.findIndex(o => o.name === w1Name));
+            const w2Idx = Math.max(0, team2Officers.findIndex(o => o.name === w2Name));
+            const we1Idx = Math.max(0, team1Officers.findIndex(o => o.name === we1Name));
+            const we2Idx = Math.max(0, team2Officers.findIndex(o => o.name === we2Name));
+
+            scheduleData = {};
+            generateMonthlySchedule({ w1: w1Idx, w2: w2Idx, we1: we1Idx, we2: we2Idx });
+            closeBatchModal();
+            renderCalendar(); renderListTable(); updateTodaySummary();
+            alert("자동 편성이 완료되었습니다.");
+        }
+
+        function openConfigModal() { renderConfigLists(); switchConfigTab('officer'); document.getElementById('configModal').classList.remove('hidden'); }
+        function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
+
+        function switchConfigTab(tabName) {
+            document.getElementById('tabOfficerBtn').className = `flex-1 py-2 rounded-xl transition ${tabName === 'officer' ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-100 text-slate-600'}`;
+            document.getElementById('tabCommanderBtn').className = `flex-1 py-2 rounded-xl transition ${tabName === 'commander' ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-100 text-slate-600'}`;
+            document.getElementById('tabAdminBtn').className = `flex-1 py-2 rounded-xl transition ${tabName === 'admin' ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-100 text-slate-600'}`;
+
+            document.getElementById('tabOfficerContent').classList.toggle('hidden', tabName !== 'officer');
+            document.getElementById('tabCommanderContent').classList.toggle('hidden', tabName !== 'commander');
+            document.getElementById('tabAdminContent').classList.toggle('hidden', tabName !== 'admin');
+        }
+
+        function renderConfigLists() {
+            document.getElementById('team1ListContainer').innerHTML = team1Officers.map((o, i) => `<div class="flex justify-between items-center bg-white p-2 rounded-lg border text-xs"><span>${i+1}. ${o.name} (${o.contact})</span><button onclick="removeOfficer(1, ${i})" class="text-rose-500"><i class="fa-solid fa-trash"></i></button></div>`).join('');
+            document.getElementById('team2ListContainer').innerHTML = team2Officers.map((o, i) => `<div class="flex justify-between items-center bg-white p-2 rounded-lg border text-xs"><span>${i+1}. ${o.name} (${o.contact})</span><button onclick="removeOfficer(2, ${i})" class="text-rose-500"><i class="fa-solid fa-trash"></i></button></div>`).join('');
+            document.getElementById('commanderListContainer').innerHTML = commanders.map((c, i) => `<div class="flex justify-between items-center bg-white p-2 rounded-lg border text-xs"><span>${c.name} (${c.contact})</span><button onclick="removeCommander(${i})" class="text-rose-500"><i class="fa-solid fa-trash"></i></button></div>`).join('');
+            document.getElementById('adminListContainer').innerHTML = admins.map((a, i) => `<div class="flex justify-between items-center bg-white p-2 rounded-lg border text-xs"><span>${a.name} (${a.contact})</span>${admins.length > 1 ? `<button onclick="removeAdmin(${i})" class="text-rose-500"><i class="fa-solid fa-trash"></i></button>` : ''}</div>`).join('');
+        }
+
+        function addOfficer() {
+            const team = document.getElementById('newOfficerTeam').value;
+            const name = document.getElementById('newOfficerName').value.trim();
+            const contact = document.getElementById('newOfficerContact').value.trim();
+            if (!name || !contact) return alert("입력값을 확인하세요.");
+            if (team === '1') team1Officers.push({ id: Date.now(), name, contact, password: '123' });
+            else team2Officers.push({ id: Date.now(), name, contact, password: '123' });
+            renderConfigLists(); generateMonthlySchedule(); renderCalendar(); renderListTable();
+        }
+
+        function removeOfficer(team, idx) {
+            if (team === 1) team1Officers.splice(idx, 1); else team2Officers.splice(idx, 1);
+            renderConfigLists(); generateMonthlySchedule(); renderCalendar(); renderListTable();
+        }
+
+        function addCommander() {
+            const name = document.getElementById('newCommanderName').value.trim();
+            const contact = document.getElementById('newCommanderContact').value.trim();
+            if (!name || !contact) return alert("입력값을 확인하세요.");
+            commanders.push({ id: Date.now(), name, contact, password: '123' });
+            renderConfigLists(); saveStateToSupabase();
+        }
+
+        function removeCommander(idx) { commanders.splice(idx, 1); renderConfigLists(); saveStateToSupabase(); }
+
+        function addAdmin() {
+            const name = document.getElementById('newAdminName').value.trim();
+            const contact = document.getElementById('newAdminContact').value.trim();
+            const password = document.getElementById('newAdminPassword').value.trim();
+            if (!name || !contact || !password) return alert("입력값을 확인하세요.");
+            admins.push({ id: Date.now(), name, contact, password, isAdmin: true });
+            renderConfigLists(); saveStateToSupabase();
+        }
+
+        function removeAdmin(idx) {
+            if (admins.length <= 1) return alert("최소 1명의 관리자가 필요합니다.");
+            admins.splice(idx, 1); renderConfigLists(); saveStateToSupabase();
+        }
+
+        function triggerKakaoAlert() {
+            const now = new Date();
+            const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+            const duty = scheduleData[dateKey] || { team1Officer: '미지정', team2Officer: '미지정', commander: '미지정' };
+            const msg = `📢 [3광역수사대] ${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일 대기근무 안내\n\n- 1조(선임): ${duty.team1Officer}\n- 2조(후임): ${duty.team2Officer}\n- 수사대장: ${duty.commander}`;
+            document.getElementById('kakaoMessageContent').innerText = msg;
+            document.getElementById('kakaoAlertModal').classList.remove('hidden');
+        }
+
+        function closeKakaoModal() { document.getElementById('kakaoAlertModal').classList.add('hidden'); }
+
+        function shareViaKakaoWeb() {
+            const now = new Date();
+            const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+            const duty = scheduleData[dateKey] || { team1Officer: '-', team2Officer: '-', commander: '-' };
+            const text = encodeURIComponent(`[3광역수사대 대기수사관 알림]\n1조: ${duty.team1Officer}\n2조: ${duty.team2Officer}\n대장: ${duty.commander}`);
+            window.open(`https://sharer.kakao.com/talk/friends/picker/link?url=${encodeURIComponent(window.location.href)}&text=${text}`, '_blank', 'width=500,height=600');
+        }
+    </script>
+</body>
+</html>
