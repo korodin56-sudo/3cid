@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Supabase JS Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Kakao SDK JavaScript Library -->
+    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" integrity="sha384-TiCUE00h649CAMonG018J2ujFgDKW/5W3zhHySS1bQz95d43T34wFhA0X7bY+LqB" crossorigin="anonymous"></script>
     <!-- Inter Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -464,6 +466,7 @@
 
         const DEFAULT_SUPABASE_URL = "https://xdxdrxpkqtigowrsezui.supabase.co";
         const DEFAULT_SUPABASE_KEY = "sb_publishable_6KMAMfcDlwyGKdyZuuZ_bw_CFm303Gb";
+        const KAKAO_JAVASCRIPT_KEY = "d830dad9e01776f2b18d5cd018d25d46";
 
         let currentYear = 2026;
         let currentMonth = 9;
@@ -506,6 +509,15 @@
         };
 
         window.addEventListener('DOMContentLoaded', () => {
+            // Initialize Kakao SDK with the provided JavaScript key
+            if (typeof Kakao !== 'undefined' && !Kakao.isInitialized()) {
+                try {
+                    Kakao.init(KAKAO_JAVASCRIPT_KEY);
+                    console.log("Kakao SDK Initialized successfully:", Kakao.isInitialized());
+                } catch (e) {
+                    console.warn("Kakao SDK initialization error:", e);
+                }
+            }
             autoConnectSupabase();
         });
 
@@ -1010,6 +1022,37 @@
             const now = new Date();
             const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
             const duty = scheduleData[dateKey] || { team1Officer: '-', team2Officer: '-', commander: '-' };
+            
+            if (typeof Kakao !== 'undefined' && Kakao.isInitialized()) {
+                try {
+                    Kakao.Share.sendDefault({
+                        objectType: 'feed',
+                        content: {
+                            title: `[3광역수사대] ${now.getMonth() + 1}월 ${now.getDate()}일 대기근무표`,
+                            description: `1조(선임): ${duty.team1Officer}\n2조(후임): ${duty.team2Officer}\n수사대장: ${duty.commander}`,
+                            imageUrl: 'https://cdn-icons-png.flaticon.com/512/9131/9131545.png',
+                            link: {
+                                mobileWebUrl: window.location.href,
+                                webUrl: window.location.href,
+                            },
+                        },
+                        buttons: [
+                            {
+                                title: '근무표 확인하기',
+                                link: {
+                                    mobileWebUrl: window.location.href,
+                                    webUrl: window.location.href,
+                                },
+                            },
+                        ],
+                    });
+                    return;
+                } catch (err) {
+                    console.warn("Kakao.Share.sendDefault failed, fallback to sharer URL:", err);
+                }
+            }
+
+            // Fallback web sharer
             const text = encodeURIComponent(`[3광역수사대 대기수사관 알림]\n1조: ${duty.team1Officer}\n2조: ${duty.team2Officer}\n대장: ${duty.commander}`);
             window.open(`https://sharer.kakao.com/talk/friends/picker/link?url=${encodeURIComponent(window.location.href)}&text=${text}`, '_blank', 'width=500,height=600');
         }
