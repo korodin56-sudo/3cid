@@ -31,7 +31,7 @@
 </head>
 <body class="bg-slate-100 text-slate-800 h-full flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
 
-    <!-- Supabase 연동 모달 (기존 입력 방식 -> 자동 연동으로 변경) -->
+    <!-- Supabase 연동 모달 -->
     <div id="supabaseModal" class="fixed inset-0 bg-indigo-950/95 backdrop-blur-lg z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-white/20 space-y-6">
             <div class="text-center space-y-2">
@@ -60,7 +60,9 @@
         </div>
     </div>
 
+    <!-- 로그인 모달 -->
     <div id="loginModal" class="fixed inset-0 bg-indigo-950/90 backdrop-blur-lg z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-white/20 space-y-6">
             <div class="text-center space-y-2">
                 <div class="inline-flex bg-gradient-to-tr from-indigo-600 to-indigo-800 text-white p-4 rounded-2xl shadow-lg shadow-indigo-500/30 mb-1">
                     <i class="fa-solid fa-shield-halved text-3xl"></i>
@@ -460,7 +462,6 @@
         let supabaseClient = null;
         let isDemoMode = false;
 
-        // 전달받은 Supabase URL 및 Key 설정
         const DEFAULT_SUPABASE_URL = "https://xdxdrxpkqtigowrsezui.supabase.co";
         const DEFAULT_SUPABASE_KEY = "sb_publishable_6KMAMfcDlwyGKdyZuuZ_bw_CFm303Gb";
 
@@ -471,20 +472,53 @@
         let alertEnabled = true;
         let alertTime = "16:00";
 
-        // 페이지 로드시 전달받은 Supabase 정보로 자동 접속 실행
+        // 기본 데이터 상태
+        let team1Officers = [
+            { id: 1, name: "김선임", contact: "01050897901", password: "123" },
+            { id: 2, name: "이선임", contact: "01023456789", password: "123" },
+            { id: 3, name: "박선임", contact: "01034567890", password: "123" },
+            { id: 4, name: "정선임", contact: "01045678901", password: "123" },
+            { id: 5, name: "최선임", contact: "01056789012", password: "123" }
+        ];
+
+        let team2Officers = [
+            { id: 6, name: "김후임", contact: "01067890123", password: "123" },
+            { id: 7, name: "이후임", contact: "01078901234", password: "123" },
+            { id: 8, name: "박후임", contact: "01089012345", password: "123" },
+            { id: 9, name: "정후임", contact: "01090123456", password: "123" },
+            { id: 10, name: "최후임", contact: "01001234567", password: "123" }
+        ];
+
+        let commanders = [
+            { id: 1, name: "오대장", contact: "01011112222", password: "123" },
+            { id: 2, name: "한대장", contact: "01033334444", password: "123" }
+        ];
+
+        let admins = [
+            { id: 1, name: "관리자", contact: "01050897901", password: "admin123", isAdmin: true }
+        ];
+
+        let scheduleData = {};
+        let customHolidays = {};
+        const fixedHolidays = {
+            "1-1": "신정", "3-1": "삼일절", "5-5": "어린이날", "6-6": "현충일",
+            "8-15": "광복절", "10-3": "개천절", "10-9": "한글날", "12-25": "성탄절"
+        };
+
         window.addEventListener('DOMContentLoaded', () => {
             autoConnectSupabase();
         });
 
         async function autoConnectSupabase() {
             try {
-                supabaseClient = supabase.createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_KEY);
+                if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+                    supabaseClient = window.supabase.createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_KEY);
+                }
                 document.getElementById('supabaseModal').classList.add('hidden');
                 document.getElementById('loginModal').classList.remove('hidden');
                 await loadDataFromSupabase();
             } catch (err) {
-                console.error("자동 연동 오류:", err);
-                // 자동 접속 실패 시 수동 입력 모달 표시
+                console.warn("자동 연동 중 예외 발생, 수동 모달 표시:", err);
                 document.getElementById('supabaseModal').classList.remove('hidden');
             }
         }
@@ -509,7 +543,7 @@
             }
 
             try {
-                supabaseClient = supabase.createClient(url, key);
+                supabaseClient = window.supabase.createClient(url, key);
                 document.getElementById('supabaseModal').classList.add('hidden');
                 document.getElementById('loginModal').classList.remove('hidden');
                 await loadDataFromSupabase();
@@ -520,7 +554,13 @@
         }
 
         async function loadDataFromSupabase() {
-            if (!supabaseClient) return;
+            if (!supabaseClient || isDemoMode) {
+                generateMonthlySchedule();
+                renderCalendar();
+                renderListTable();
+                updateTodaySummary();
+                return;
+            }
             try {
                 const { data, error } = await supabaseClient.from('duty_app_state').select('*').eq('id', 1).single();
                 if (data && data.payload) {
@@ -533,7 +573,7 @@
                     customHolidays = parsed.customHolidays || {};
                 }
             } catch (e) {
-                console.log("기존 데이터 없음, 초기 상태 저장 중...");
+                console.log("기존 데이터 없음 또는 테이블 미생성 상태, 로컬 기본값 사용 중...");
                 await saveStateToSupabase();
             }
             generateMonthlySchedule();
@@ -544,10 +584,14 @@
 
         async function saveStateToSupabase() {
             if (!supabaseClient || isDemoMode) return;
-            const payload = JSON.stringify({
-                team1Officers, team2Officers, commanders, admins, scheduleData, customHolidays
-            });
-            await supabaseClient.from('duty_app_state').upsert({ id: 1, payload, updated_at: new Date() });
+            try {
+                const payload = JSON.stringify({
+                    team1Officers, team2Officers, commanders, admins, scheduleData, customHolidays
+                });
+                await supabaseClient.from('duty_app_state').upsert({ id: 1, payload, updated_at: new Date() });
+            } catch (err) {
+                console.error("Supabase 저장 중 오류:", err);
+            }
         }
 
         function checkHolidayStatus(year, month, day) {
@@ -941,7 +985,7 @@
             const name = document.getElementById('newAdminName').value.trim();
             const contact = document.getElementById('newAdminContact').value.trim();
             const password = document.getElementById('newAdminPassword').value.trim();
-            if (!name || !contact || !password) return alert("입력값을 확인하세요.");
+            if (!name || !contact || !password) return alert("입Link값을 확인하세요.");
             admins.push({ id: Date.now(), name, contact, password, isAdmin: true });
             renderConfigLists(); saveStateToSupabase();
         }
